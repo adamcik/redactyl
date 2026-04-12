@@ -1,3 +1,5 @@
+from importlib.metadata import PackageNotFoundError, version
+
 from .core import (
     Action,
     PathRule,
@@ -25,8 +27,14 @@ from .types import (
 )
 from .url import deserialize_url, serialize_url
 
+try:
+    __version__ = version("redactyl")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
+
 __all__ = [
     "Action",
+    "__version__",
     "ContinueDecision",
     "DropDecision",
     "JsonValue",
