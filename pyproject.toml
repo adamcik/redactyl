@@ -1,0 +1,30 @@
+[project]
+name = "redactyl"
+description = "Structured log and payload redaction with composable rules and secret scrubbing"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+dynamic = ["version"]
+
+dependencies = []
+
+[dependency-groups]
+dev = ["basedpyright", "pytest", "ruff"]
+
+[build-system]
+requires = ["hatch-vcs>=0.4", "hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+include = ["src"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/redactyl"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
