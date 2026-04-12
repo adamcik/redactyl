@@ -1,14 +1,14 @@
-import re
-from dataclasses import dataclass, field
-from enum import Enum
-from functools import lru_cache
-from typing import Iterable, assert_never
-
-from .options import Options
 import hashlib
 import hmac
+import re
 import secrets
+from collections.abc import Iterable
+from dataclasses import dataclass, field
+from enum import StrEnum
+from functools import lru_cache
+from typing import assert_never, cast
 
+from .options import Options
 from .secrets import CompositeSecretStore, SecretStore
 from .types import (
     ContinueDecision,
@@ -22,12 +22,10 @@ from .types import (
     SecretStoreProtocol,
     StopDecision,
 )
-from typing import cast
-
 from .url import deserialize_url, serialize_url
 
 
-class Action(str, Enum):
+class Action(StrEnum):
     REDACT = "redact"
     SCRUB = "scrub"
     DROP = "drop"
@@ -117,7 +115,7 @@ class UrlRule:
         *,
         value: JsonValue,
         path: str,
-        key: str | None,
+        key: str | None,  # noqa: ARG002
         ctx: RuleContext,
     ) -> RuleResult:
         if not _path_matches(self._segments, path):
@@ -125,7 +123,9 @@ class UrlRule:
         if not isinstance(value, str):
             raise TypeError("URL rule expects a string value")
         url_dict = deserialize_url(value)
-        _redact_dict(cast(dict[str, JsonValue], url_dict), "", ctx, self.rules, depth=0)
+        _redact_dict(
+            cast("dict[str, JsonValue]", url_dict), "", ctx, self.rules, depth=0
+        )
         return StopDecision(value=serialize_url(url_dict), skip_children=True)
 
 
@@ -143,8 +143,8 @@ class RegexValueRule:
         self,
         *,
         value: JsonValue,
-        path: str,
-        key: str | None,
+        path: str,  # noqa: ARG002
+        key: str | None,  # noqa: ARG002
         ctx: RuleContext,
     ) -> RuleResult:
         if not isinstance(value, str):
@@ -188,7 +188,7 @@ def build_redactor(
         mutable_secrets = secrets or SecretStore()
         composite = CompositeSecretStore(base_secrets, mutable_secrets)
         ctx = _Context(options=opts, secrets=composite, hasher=hasher)
-        _redact_dict(cast(dict[str, JsonValue], payload), "", ctx, rule_list, depth=0)
+        _redact_dict(cast("dict[str, JsonValue]", payload), "", ctx, rule_list, depth=0)
 
     return _redactor
 
@@ -233,8 +233,8 @@ def _redact_dict(
 
 
 def _recurse_value(
-    parent: dict[str, JsonValue],
-    key: str,
+    _parent: dict[str, JsonValue],
+    _key: str,
     value: JsonValue,
     path: str,
     ctx: RuleContext,
@@ -292,8 +292,8 @@ def _redact_list(
 
 
 def _recurse_list_value(
-    parent: list[JsonValue],
-    index: int,
+    _parent: list[JsonValue],
+    _index: int,
     value: JsonValue,
     path: str,
     ctx: RuleContext,
@@ -345,7 +345,7 @@ def _apply_action(
     action: Action,
     value: JsonValue,
     path: str,
-    key: str | None,
+    _key: str | None,
     ctx: RuleContext,
 ) -> RuleResult:
     if action is Action.SAFE:
@@ -369,7 +369,7 @@ def _apply_action(
         if not isinstance(value, str):
             raise TypeError(f"URL action expects string at {path}")
         url_dict = deserialize_url(value)
-        _redact_dict(cast(dict[str, JsonValue], url_dict), "", ctx, (), depth=0)
+        _redact_dict(cast("dict[str, JsonValue]", url_dict), "", ctx, (), depth=0)
         return StopDecision(value=serialize_url(url_dict), skip_children=True)
     return None
 
@@ -415,7 +415,7 @@ def _apply_value_action(
 
 def _apply_url_to_match(value: str, ctx: RuleContext, rules: tuple[Rule, ...]) -> str:
     url_dict = deserialize_url(value)
-    _redact_dict(cast(dict[str, JsonValue], url_dict), "", ctx, rules, depth=0)
+    _redact_dict(cast("dict[str, JsonValue]", url_dict), "", ctx, rules, depth=0)
     return serialize_url(url_dict)
 
 
@@ -465,8 +465,8 @@ def _path_matches(segments: tuple[str, ...], path: str) -> bool:
     path_segments = tuple(path.split("."))
     if len(path_segments) != len(segments):
         return False
-    for pattern, actual in zip(segments, path_segments):
-        if pattern != "*" and pattern != actual:
+    for pattern, actual in zip(segments, path_segments, strict=False):
+        if pattern not in {"*", actual}:
             return False
     return True
 
@@ -478,7 +478,4 @@ def _tokenize_key(key: str) -> tuple[str, ...]:
 
 
 def _key_matches_tokens(key: str, tokens: frozenset[str]) -> bool:
-    for token in _tokenize_key(key):
-        if token in tokens:
-            return True
-    return False
+    return any(token in tokens for token in _tokenize_key(key))

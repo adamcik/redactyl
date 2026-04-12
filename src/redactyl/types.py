@@ -1,8 +1,10 @@
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 from .options import Options
-from .secrets import SecretStore
+
+if TYPE_CHECKING:
+    from .secrets import SecretStore
 
 type JsonValue = (
     int | float | str | bool | None | list["JsonValue"] | dict[str, "JsonValue"]

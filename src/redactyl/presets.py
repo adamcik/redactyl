@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import TYPE_CHECKING
 
 from .core import Action, PathRule, SubstringRule, UrlRule, build_redactor
-from .options import Options
-from .types import Redactor, Rule
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from .options import Options
+    from .types import Redactor, Rule
 
 _SENSITIVE_TOKENS: frozenset[str] = frozenset(
     {

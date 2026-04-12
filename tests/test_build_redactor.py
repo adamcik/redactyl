@@ -4,8 +4,8 @@ from redactyl import (
     Action,
     ContinueDecision,
     Options,
-    StopDecision,
     PathRule,
+    StopDecision,
     build_redactor,
 )
 from redactyl.secrets import SecretStore
@@ -13,13 +13,13 @@ from redactyl.secrets import SecretStore
 
 def test_rules_can_continue_and_update_value_for_later_rules():
     class PrefixRule:
-        def __call__(self, *, value, path, key, ctx):
+        def __call__(self, *, value, path, key, ctx):  # noqa: ARG002
             if path != "user.name":
                 return None
             return ContinueDecision(value=f"user:{value}")
 
     class StopRule:
-        def __call__(self, *, value, path, key, ctx):
+        def __call__(self, *, value, path, key, ctx):  # noqa: ARG002
             if path != "user.name":
                 return None
             if value != "user:alice":

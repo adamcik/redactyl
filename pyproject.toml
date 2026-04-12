@@ -46,3 +46,38 @@ packages = ["src/redactyl"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "D100",  # undocumented-public-module
+  "D101",  # undocumented-public-class
+  "D102",  # undocumented-public-method
+  "D103",  # undocumented-public-function
+  "D104",  # undocumented-public-package
+  "D105",  # undocumented-magic-method
+  "D107",  # undocumented-public-init
+  "D203",  # incorrect-blank-line-before-class
+  "D213",  # multi-line-summary-second-line
+  "EM101",  # raw-string-in-exception
+  "EM102",  # f-string-in-exception
+  "C901",  # complex-structure
+  "PLR0911",  # too-many-return-statements
+  "PLR0913",  # too-many-arguments
+  "S105",  # hardcoded-password-string
+  "TRY003",  # raise-vanilla-args
+  # Conflicts with `ruff format`
+  "COM812",  # missing-trailing-comma
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "ANN001",  # missing-type-function-argument
+  "ANN201",  # missing-return-type-undocumented-public-function
+  "ANN204",  # missing-return-type-special-method
+  "INP001",  # implicit-namespace-package
+  "S101",  # assert
+]

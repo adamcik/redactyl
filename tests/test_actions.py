@@ -51,7 +51,7 @@ def test_action_hash_returns_short_hash():
 
     assert payload["user"]["id"].startswith("[")
     assert payload["user"]["id"].endswith("]")
-    assert len(payload["user"]["id"]) == 10
+    assert len(payload["user"]["id"]) == options.hash_length + 2
 
 
 def test_action_scrub_nested_values():

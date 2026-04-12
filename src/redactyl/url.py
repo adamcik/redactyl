@@ -16,10 +16,9 @@ class UrlDict(TypedDict):
 
 def deserialize_url(value: str) -> UrlDict:
     parsed = urllib.parse.urlsplit(value)
-    params: dict[str, JsonValue] = {
-        key: val
-        for key, val in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
-    }
+    params: dict[str, JsonValue] = dict(
+        urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    )
     userinfo: dict[str, JsonValue] = {}
     if parsed.username or parsed.password:
         if parsed.username is not None:
@@ -50,10 +49,7 @@ def serialize_url(data: UrlDict) -> str:
     if userinfo:
         user = _as_str(userinfo.get("user"))
         password = _as_str(userinfo.get("password"))
-        if password:
-            netloc = f"{user}:{password}@{netloc}"
-        else:
-            netloc = f"{user}@{netloc}"
+        netloc = f"{user}:{password}@{netloc}" if password else f"{user}@{netloc}"
     if isinstance(port, int):
         netloc = f"{netloc}:{port}"
 
