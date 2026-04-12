@@ -1,6 +1,8 @@
-# Redactyl
+<p align="center">
+  <img src="static/redactyl.svg" alt="Redactyl logo" width="420" />
+</p>
 
-![Redactyl logo](static/redactyl.svg)
+# Redactyl
 
 Python library for redacting sensitive data in structured logs, error payloads, and other JSON-like data where the full shape is not known ahead of time. Use layered rules, heuristics, and actions (path, regex, substring, URL) as building blocks for risk mitigation, applied in-place to dicts.
 
@@ -25,16 +27,16 @@ uv sync
 from redactyl import Action, PathRule, SubstringRule, build_redactor
 
 rules = [
-    PathRule('user.password', Action.REDACT),
-    SubstringRule(tokens=frozenset({'token'}), action=Action.REDACT),
+    PathRule("user.password", Action.REDACT),
+    SubstringRule(tokens=frozenset({"token"}), action=Action.REDACT),
 ]
 
 redactor = build_redactor(rules)
 
 payload = {
-    'user': {'password': 'hunter2'},
-    'id_token': 'secret',
-    'message': 'token=hunter2',
+    "user": {"password": "hunter2"},
+    "id_token": "secret",
+    "message": "token=hunter2",
 }
 
 redactor(payload)
@@ -47,29 +49,35 @@ print(payload)
 ```python
 from redactyl import Action, PathRule, build_redactor
 
-redactor = build_redactor([
-    PathRule('user.password', Action.REDACT),
-    PathRule('auth.token', Action.REDACT),
-])
+redactor = build_redactor(
+    [
+        PathRule("user.password", Action.REDACT),
+        PathRule("auth.token", Action.REDACT),
+    ]
+)
 ```
 
 ### Redact by key token (camel/snake)
 ```python
 from redactyl import Action, SubstringRule, build_redactor
 
-redactor = build_redactor([
-    SubstringRule(tokens=frozenset({'token', 'secret'}), action=Action.REDACT),
-])
+redactor = build_redactor(
+    [
+        SubstringRule(tokens=frozenset({"token", "secret"}), action=Action.REDACT),
+    ]
+)
 ```
 
 ### Scrub previously seen secrets from a message
 ```python
 from redactyl import Action, PathRule, build_redactor
 
-redactor = build_redactor([
-    PathRule('user.password', Action.REDACT),
-    PathRule('message', Action.SCRUB),
-])
+redactor = build_redactor(
+    [
+        PathRule("user.password", Action.REDACT),
+        PathRule("message", Action.SCRUB),
+    ]
+)
 ```
 
 ### Share secrets across multiple payloads in a request lifecycle
@@ -78,25 +86,32 @@ from redactyl import Action, PathRule, build_redactor
 from redactyl.secrets import SecretStore
 
 secrets = SecretStore()
-redactor = build_redactor([
-    PathRule('secret', Action.REDACT),
-    PathRule('message', Action.SCRUB),
-])
+redactor = build_redactor(
+    [
+        PathRule("secret", Action.REDACT),
+        PathRule("message", Action.SCRUB),
+    ]
+)
 
-redactor({'secret': 'token', 'message': 'token'}, secrets=secrets)
-redactor({'message': 'token'}, secrets=secrets)
+redactor({"secret": "token", "message": "token"}, secrets=secrets)
+redactor({"message": "token"}, secrets=secrets)
 ```
 
 ### Redact URL params in a known URL field
 ```python
 from redactyl import Action, PathRule, UrlRule, build_redactor
 
-redactor = build_redactor([
-    UrlRule('url', (
-        PathRule('params.token', Action.REDACT),
-        PathRule('params.password', Action.REDACT),
-    )),
-])
+redactor = build_redactor(
+    [
+        UrlRule(
+            "url",
+            (
+                PathRule("params.token", Action.REDACT),
+                PathRule("params.password", Action.REDACT),
+            ),
+        ),
+    ]
+)
 ```
 
 ### Redact sensitive param names inside URLs found in text
@@ -106,18 +121,22 @@ import re
 from redactyl import Action, PathRule, RegexValueRule, SubstringRule, build_redactor
 
 url_rules = (
-    SubstringRule(tokens=frozenset({'token', 'apikey', 'password'}), action=Action.REDACT),
-    PathRule('userinfo.*', Action.REDACT),
-    PathRule('fragment', Action.REDACT),
+    SubstringRule(
+        tokens=frozenset({"token", "apikey", "password"}), action=Action.REDACT
+    ),
+    PathRule("userinfo.*", Action.REDACT),
+    PathRule("fragment", Action.REDACT),
 )
 
-redactor = build_redactor([
-    RegexValueRule(
-        pattern=re.compile(r'https?://\S+'),
-        action=Action.URL,
-        rules=url_rules,
-    ),
-])
+redactor = build_redactor(
+    [
+        RegexValueRule(
+            pattern=re.compile(r"https?://\S+"),
+            action=Action.URL,
+            rules=url_rules,
+        ),
+    ]
+)
 ```
 
 ### Scrub URL params using previously seen secrets
@@ -126,15 +145,17 @@ import re
 
 from redactyl import Action, PathRule, RegexValueRule, UrlRule, build_redactor
 
-redactor = build_redactor([
-    PathRule('secret', Action.REDACT),
-    UrlRule('url', (PathRule('params.*', Action.SCRUB),)),
-    RegexValueRule(
-        pattern=re.compile(r'https?://\S+'),
-        action=Action.URL,
-        rules=(PathRule('params.*', Action.SCRUB),),
-    ),
-])
+redactor = build_redactor(
+    [
+        PathRule("secret", Action.REDACT),
+        UrlRule("url", (PathRule("params.*", Action.SCRUB),)),
+        RegexValueRule(
+            pattern=re.compile(r"https?://\S+"),
+            action=Action.URL,
+            rules=(PathRule("params.*", Action.SCRUB),),
+        ),
+    ]
+)
 ```
 
 ## Secret store lifetime
@@ -187,8 +208,8 @@ Matches dot-delimited paths with optional `*` wildcards.
 ```python
 from redactyl import Action, PathRule
 
-PathRule('user.password', Action.REDACT)
-PathRule('user.*', Action.REDACT)
+PathRule("user.password", Action.REDACT)
+PathRule("user.*", Action.REDACT)
 ```
 
 ### RegexPathRule
@@ -197,7 +218,7 @@ Matches a path using a regular expression.
 ```python
 from redactyl import Action, RegexPathRule
 
-RegexPathRule(pattern=r'\.secret$', action=Action.REDACT)
+RegexPathRule(pattern=r"\.secret$", action=Action.REDACT)
 ```
 
 ### SubstringRule
@@ -206,7 +227,7 @@ Matches key tokens derived from camelCase, snake_case, and alphanumerics.
 ```python
 from redactyl import Action, SubstringRule
 
-SubstringRule(tokens=frozenset({'token'}), action=Action.REDACT)
+SubstringRule(tokens=frozenset({"token"}), action=Action.REDACT)
 ```
 
 ### RegexValueRule
@@ -227,18 +248,25 @@ Use `UrlRule` to parse a URL string and apply rules to its parts.
 ```python
 from redactyl import Action, PathRule, UrlRule, build_redactor
 
-redactor = build_redactor([
-    UrlRule('url', (PathRule('params.token', Action.REDACT),)),
-])
+redactor = build_redactor(
+    [
+        UrlRule("url", (PathRule("params.token", Action.REDACT),)),
+    ]
+)
 
-preset = build_redactor([
-    UrlRule('url', (
-        PathRule('userinfo.user', Action.REDACT),
-        PathRule('userinfo.password', Action.REDACT),
-        PathRule('fragment', Action.REDACT),
-        PathRule('params.*', Action.REDACT),
-    )),
-])
+preset = build_redactor(
+    [
+        UrlRule(
+            "url",
+            (
+                PathRule("userinfo.user", Action.REDACT),
+                PathRule("userinfo.password", Action.REDACT),
+                PathRule("fragment", Action.REDACT),
+                PathRule("params.*", Action.REDACT),
+            ),
+        ),
+    ]
+)
 ```
 
 ### Actions
@@ -261,7 +289,7 @@ from redactyl import (
     Action,
 )
 
-rules = [PathRule('user.password', Action.REDACT)]
+rules = [PathRule("user.password", Action.REDACT)]
 
 before_send = sentry_before_send_redactor(rules)
 breadcrumb = sentry_breadcrumb_redactor(rules)
@@ -275,11 +303,11 @@ Configure behavior via `Options`:
 from redactyl import Options, build_redactor
 
 options = Options(
-    replacement='[REDACTED]',
+    replacement="[REDACTED]",
     min_length=4,
     max_depth=None,
     max_items=None,
-    hash_secret=b'secret',
+    hash_secret=b"secret",
     hash_length=10,
 )
 
