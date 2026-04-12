@@ -4,9 +4,27 @@ description = "Structured log and payload redaction with composable rules and se
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
+authors = [{ name = "Thomas Adamcik", email = "thomas@adamcik.no" }]
+keywords = ["logging", "privacy", "redaction", "security", "structured-data"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
 dynamic = ["version"]
 
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/adamcik/redactyl"
+Issues = "https://github.com/adamcik/redactyl/issues"
+Repository = "https://github.com/adamcik/redactyl"
 
 [dependency-groups]
 dev = ["basedpyright", "pytest", "ruff"]
