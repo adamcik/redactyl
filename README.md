@@ -4,16 +4,26 @@
 
 # Redactyl
 
-Python library for redacting sensitive data in structured logs, error payloads, and other JSON-like data where the full shape is not known ahead of time. Use layered rules, heuristics, and actions (path, regex, substring, URL) as building blocks for risk mitigation, applied in-place to dicts.
+Defense-in-depth redaction and scrubbing for Python structured payloads.
+
+Redactyl is a Python library for removing sensitive data from structured logs,
+error payloads, Sentry events, and other nested JSON-like dict/list payloads.
+It is built for real-world payloads where the full shape is not known ahead of
+time. You define layered rules and heuristics, then Redactyl mutates payloads
+in-place.
+
+`REDACT` replaces the matched value directly. `SCRUB` removes previously seen
+secrets from surrounding text using a shared `SecretStore`.
 
 ## Features
-- Rule-based redaction for nested dict/list payloads
-- Path rules with wildcards (`user.*`)
-- Regex rules for matching paths or string values
-- Substring rules for matching key tokens (e.g. `id_token`)
-- URL parsing to redact query params, userinfo, fragments
-- Actions: `REDACT`, `SCRUB`, `DROP`, `URL`, `SAFE`, `HASH`
-- Optional depth/item limits to cap large payloads
+- Built for Python services that process logs, events, and nested payloads
+- In-place mutation of dict/list payloads with no schema requirement
+- Path-based rules with wildcards (`PathRule("user.*", ...)`)
+- Regex rules for paths and string values (`RegexPathRule`, `RegexValueRule`)
+- Key token matching across snake_case and camelCase (`SubstringRule`)
+- URL-aware rewriting for query params, userinfo, and fragments (`UrlRule`, `Action.URL`)
+- Actions for different handling strategies: `REDACT`, `SCRUB`, `DROP`, `SAFE`, `URL`, `HASH`
+- Optional limits (`max_depth`, `max_items`) to cap large payload traversal
 
 ## Install
 This project uses `uv` for dependency management.
@@ -43,48 +53,59 @@ redactor(payload)
 print(payload)
 ```
 
+## API taxonomy
+
+The API has two primary concepts:
+
+- Rules: match a path or value and return a `RuleDecision`.
+- Actions: what to do when a rule matches (replace, scrub, drop, stop).
+
+Common taxonomy:
+
+- Path-based rules (`PathRule`, `RegexPathRule`, `UrlRule`) match structured payload paths.
+- Value-based rules (`RegexValueRule`) match and transform string content.
+- Token rules (`SubstringRule`) match key names by tokenizing camel/snake case.
+
+Notes:
+
+- Prefer `UrlRule` when you know a field is a URL and want to apply URL rules.
+- Use `RegexValueRule(..., action=Action.URL, rules=...)` to find URLs inside strings.
+- `SCRUB` always relies on the shared `SecretStore` for the current call or provided `secrets=`.
+
 ## Cookbook
 
-### Redact known sensitive fields
-```python
-from redactyl import Action, PathRule, build_redactor
+Examples are independent. Copy the snippet you need.
 
+```python
+import re
+
+from redactyl import Action, PathRule, RegexValueRule, SubstringRule, UrlRule, build_redactor
+from redactyl.secrets import SecretStore
+
+# Redact known sensitive fields
 redactor = build_redactor(
     [
         PathRule("user.password", Action.REDACT),
         PathRule("auth.token", Action.REDACT),
     ]
 )
-```
 
-### Redact by key token (camel/snake)
-```python
-from redactyl import Action, SubstringRule, build_redactor
-
+# Redact by key token (camel/snake)
 redactor = build_redactor(
     [
         SubstringRule(tokens=frozenset({"token", "secret"}), action=Action.REDACT),
     ]
 )
-```
 
-### Scrub previously seen secrets from a message
-```python
-from redactyl import Action, PathRule, build_redactor
-
+# Scrub previously seen secrets from a message
 redactor = build_redactor(
     [
         PathRule("user.password", Action.REDACT),
         PathRule("message", Action.SCRUB),
     ]
 )
-```
 
-### Share secrets across multiple payloads in a request lifecycle
-```python
-from redactyl import Action, PathRule, build_redactor
-from redactyl.secrets import SecretStore
-
+# Share secrets across multiple payloads in a request lifecycle
 secrets = SecretStore()
 redactor = build_redactor(
     [
@@ -92,15 +113,10 @@ redactor = build_redactor(
         PathRule("message", Action.SCRUB),
     ]
 )
-
 redactor({"secret": "token", "message": "token"}, secrets=secrets)
 redactor({"message": "token"}, secrets=secrets)
-```
 
-### Redact URL params in a known URL field
-```python
-from redactyl import Action, PathRule, UrlRule, build_redactor
-
+# Redact URL params in a known URL field
 redactor = build_redactor(
     [
         UrlRule(
@@ -112,22 +128,13 @@ redactor = build_redactor(
         ),
     ]
 )
-```
 
-### Redact sensitive param names inside URLs found in text
-```python
-import re
-
-from redactyl import Action, PathRule, RegexValueRule, SubstringRule, build_redactor
-
+# Redact sensitive param names inside URLs found in text
 url_rules = (
-    SubstringRule(
-        tokens=frozenset({"token", "apikey", "password"}), action=Action.REDACT
-    ),
+    SubstringRule(tokens=frozenset({"token", "apikey", "password"}), action=Action.REDACT),
     PathRule("userinfo.*", Action.REDACT),
     PathRule("fragment", Action.REDACT),
 )
-
 redactor = build_redactor(
     [
         RegexValueRule(
@@ -137,14 +144,8 @@ redactor = build_redactor(
         ),
     ]
 )
-```
 
-### Scrub URL params using previously seen secrets
-```python
-import re
-
-from redactyl import Action, PathRule, RegexValueRule, UrlRule, build_redactor
-
+# Scrub URL params using previously seen secrets
 redactor = build_redactor(
     [
         PathRule("secret", Action.REDACT),
@@ -171,34 +172,18 @@ base = SecretStore()
 base.add('seed', '[REDACTED]')
 
 options = Options(base_secrets_store=base)
-redactor = build_redactor([
-    PathRule('secret', Action.REDACT),
-    PathRule('message', Action.SCRUB),
-], options=options)
+redactor = build_redactor(
+    [
+        PathRule("secret", Action.REDACT),
+        PathRule("message", Action.SCRUB),
+    ],
+    options=options,
+)
 
-    request_store = SecretStore()
-    payload = {'secret': 'token', 'message': 'seed token'}
-    redactor(payload, secrets=request_store)
+request_store = SecretStore()
+payload = {"secret": "token", "message": "seed token"}
+redactor(payload, secrets=request_store)
 ```
-
-## API taxonomy
-
-The API has two primary concepts:
-
-- Rules: match a path or value and return a `RuleDecision`.
-- Actions: what to do when a rule matches (replace, scrub, drop, stop).
-
-Common taxonomy:
-
-- Path-based rules (`PathRule`, `RegexPathRule`, `UrlRule`) match structured payload paths.
-- Value-based rules (`RegexValueRule`) match and transform string content.
-- Token rules (`SubstringRule`) match key names by tokenizing camel/snake case.
-
-Notes:
-
-- Prefer `UrlRule` when you know a field is a URL and want to apply URL rules.
-- Use `RegexValueRule(..., action=Action.URL, rules=...)` to find URLs inside strings.
-- `SCRUB` always relies on the shared `SecretStore` for the current call or provided `secrets=`.
 
 ## Rules and actions
 

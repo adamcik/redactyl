@@ -1,6 +1,6 @@
 [project]
 name = "redactyl"
-description = "Structured log and payload redaction with composable rules and secret scrubbing"
+description = "Defense-in-depth redaction for Python payloads in logs, events, and nested JSON-like data"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
