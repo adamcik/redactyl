@@ -1,5 +1,7 @@
 # Redactyl
 
+![Redactyl logo](static/redactyl.svg)
+
 Python library for redacting sensitive data in structured logs, error payloads, and other JSON-like data where the full shape is not known ahead of time. Use layered rules, heuristics, and actions (path, regex, substring, URL) as building blocks for risk mitigation, applied in-place to dicts.
 
 ## Features
