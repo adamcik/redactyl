@@ -4,14 +4,16 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   release:
     runs-on: ubuntu-24.04
     environment:
       name: pypi
       url: https://pypi.org/project/redactyl/
-    permissions:
-      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: hynek/build-and-inspect-python-package@v2
