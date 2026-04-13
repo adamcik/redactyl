@@ -34,7 +34,6 @@ except PackageNotFoundError:
 
 __all__ = [
     "Action",
-    "__version__",
     "ContinueDecision",
     "DropDecision",
     "JsonValue",
@@ -49,6 +48,7 @@ __all__ = [
     "StopDecision",
     "SubstringRule",
     "UrlRule",
+    "__version__",
     "build_redactor",
     "deserialize_url",
     "sentry_before_send_redactor",

@@ -16,6 +16,7 @@ in-place.
 secrets from surrounding text using a shared `SecretStore`.
 
 ## Features
+
 - Built for Python services that process logs, events, and nested payloads
 - In-place mutation of dict/list payloads with no schema requirement
 - Path-based rules with wildcards (`PathRule("user.*", ...)`)
@@ -26,6 +27,7 @@ secrets from surrounding text using a shared `SecretStore`.
 - Optional limits (`max_depth`, `max_items`) to cap large payload traversal
 
 ## Install
+
 This project uses `uv` for dependency management.
 
 ```bash
@@ -33,6 +35,7 @@ uv sync
 ```
 
 ## Quick start
+
 ```python
 from redactyl import Action, PathRule, SubstringRule, build_redactor
 
@@ -169,6 +172,7 @@ redactor = build_redactor(
 ```
 
 ## Secret store lifetime
+
 By default, each `redactor(...)` call uses a fresh mutable secret store, so newly seen secrets do not leak across calls. You can also pass your own `SecretStore` to persist secrets for a request lifecycle.
 
 Important limitation: if a later call sees a new secret that should have been scrubbed in an earlier call, it will not be scrubbed retroactively. Avoid relying on cross-call scrubbing for newly discovered values.
@@ -197,6 +201,7 @@ redactor(payload, secrets=request_store)
 ## Rules and actions
 
 ### PathRule
+
 Matches dot-delimited paths with optional `*` wildcards.
 
 ```python
@@ -207,6 +212,7 @@ PathRule("user.*", Action.REDACT)
 ```
 
 ### RegexPathRule
+
 Matches a path using a regular expression.
 
 ```python
@@ -216,6 +222,7 @@ RegexPathRule(pattern=r"\.secret$", action=Action.REDACT)
 ```
 
 ### SubstringRule
+
 Matches key tokens derived from camelCase, snake_case, and alphanumerics.
 
 ```python
@@ -225,6 +232,7 @@ SubstringRule(tokens=frozenset({"token"}), action=Action.REDACT)
 ```
 
 ### RegexValueRule
+
 Matches string values by regex and applies the action to the match.
 
 ```python
@@ -237,6 +245,7 @@ RegexValueRule(
 ```
 
 ### URL rules
+
 Use `UrlRule` to parse a URL string and apply rules to its parts.
 
 ```python
@@ -264,6 +273,7 @@ preset = build_redactor(
 ```
 
 ### Actions
+
 - `REDACT`: Replace with the configured replacement string (default `[REDACTED]`).
 - `SCRUB`: Replace any previously-seen secrets within the value.
 - `DROP`: Remove the key from the payload.
@@ -272,6 +282,7 @@ preset = build_redactor(
 - `HASH`: Replace a string with a short hash digest.
 
 ## Presets
+
 Common entry points for structured logging and error reporting.
 
 ```python
@@ -291,6 +302,7 @@ structlog = structlog_redactor(rules)
 ```
 
 ## Options
+
 Configure behavior via `Options`:
 
 ```python
@@ -309,10 +321,12 @@ redactor = build_redactor([], options=options)
 ```
 
 Notes:
+
 - `max_depth` and `max_items` replace oversized structures with `[...]`.
 - `min_length` controls which redacted values are registered for `SCRUB`.
 
 ## Tests
+
 ```bash
 uv run pytest
 ```
