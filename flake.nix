@@ -73,8 +73,11 @@
           projectRootFile = "flake.nix";
           programs = {
             alejandra.enable = true;
+            actionlint.enable = true;
+            prettier.enable = true;
             ruff-check.enable = true;
             ruff-format.enable = true;
+            zizmor.enable = true;
           };
           settings.formatter = {
             tombi-format = {
@@ -157,8 +160,10 @@
       in {
         default = pkgs.mkShell {
           packages = [
+            pkgs.actionlint
             pkgs.tombi
             pkgs.uv
+            pkgs.zizmor
             treefmtEval.${system}.config.build.wrapper
             venv
           ];
