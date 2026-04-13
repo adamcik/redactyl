@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/redactyl.svg" alt="Redactyl logo" width="420" />
+  <img src="https://github.com/adamcik/redactyl/raw/main/static/redactyl.svg" alt="Redactyl logo" width="420" />
 </p>
 
 # Redactyl
@@ -79,7 +79,14 @@ Examples are independent. Copy the snippet you need.
 ```python
 import re
 
-from redactyl import Action, PathRule, RegexValueRule, SubstringRule, UrlRule, build_redactor
+from redactyl import (
+    Action,
+    PathRule,
+    RegexValueRule,
+    SubstringRule,
+    UrlRule,
+    build_redactor,
+)
 from redactyl.secrets import SecretStore
 
 # Redact known sensitive fields
@@ -131,7 +138,9 @@ redactor = build_redactor(
 
 # Redact sensitive param names inside URLs found in text
 url_rules = (
-    SubstringRule(tokens=frozenset({"token", "apikey", "password"}), action=Action.REDACT),
+    SubstringRule(
+        tokens=frozenset({"token", "apikey", "password"}), action=Action.REDACT
+    ),
     PathRule("userinfo.*", Action.REDACT),
     PathRule("fragment", Action.REDACT),
 )
@@ -169,7 +178,7 @@ from redactyl import Action, Options, PathRule, build_redactor
 from redactyl.secrets import SecretStore
 
 base = SecretStore()
-base.add('seed', '[REDACTED]')
+base.add("seed", "[REDACTED]")
 
 options = Options(base_secrets_store=base)
 redactor = build_redactor(
@@ -267,11 +276,11 @@ Common entry points for structured logging and error reporting.
 
 ```python
 from redactyl import (
+    Action,
+    PathRule,
     sentry_before_send_redactor,
     sentry_breadcrumb_redactor,
     structlog_redactor,
-    PathRule,
-    Action,
 )
 
 rules = [PathRule("user.password", Action.REDACT)]
