@@ -68,25 +68,41 @@
     );
 
     treefmtEval = forAllSystems (
-      system:
-        treefmt-nix.lib.evalModule nixpkgs.legacyPackages.${system} {
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        pythonSet = pythonSets.${system};
+        lintVenv = pythonSet.mkVirtualEnv "redactyl-lint-env" {
+          redactyl = ["dev"];
+        };
+      in
+        treefmt-nix.lib.evalModule pkgs {
           projectRootFile = "flake.nix";
           programs = {
             alejandra.enable = true;
             actionlint.enable = true;
             prettier.enable = true;
-            ruff-check.enable = true;
-            ruff-format.enable = true;
             zizmor.enable = true;
           };
           settings.formatter = {
+            ruff-check = {
+              command = "${lintVenv}/bin/ruff";
+              includes = ["*.py"];
+              options = ["check" "--fix"];
+              priority = 10;
+            };
+            ruff-format = {
+              command = "${lintVenv}/bin/ruff";
+              includes = ["*.py"];
+              options = ["format"];
+              priority = 20;
+            };
             tombi-format = {
-              command = "${nixpkgs.legacyPackages.${system}.tombi}/bin/tombi";
+              command = "${pkgs.tombi}/bin/tombi";
               includes = ["*.toml"];
               options = ["format" "--offline"];
             };
             tombi-lint = {
-              command = "${nixpkgs.legacyPackages.${system}.tombi}/bin/tombi";
+              command = "${pkgs.tombi}/bin/tombi";
               includes = ["*.toml"];
               options = ["lint" "--offline"];
             };
