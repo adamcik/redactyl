@@ -12,6 +12,20 @@
   },
   "packageRules": [
     {
+      "matchManagers": ["uv", "pep621"],
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "overrideDepName": "uv lock file maintenance",
+      "groupName": "uv lock file maintenance",
+      "commitMessageTopic": "uv"
+    },
+    {
+      "matchManagers": ["nix"],
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "overrideDepName": "flake lock file maintenance",
+      "groupName": "flake lock file maintenance",
+      "commitMessageTopic": "flake"
+    },
+    {
       "matchManagers": ["github-actions", "nix"],
       "matchUpdateTypes": ["digest", "pin", "patch", "minor"],
       "automerge": true,
