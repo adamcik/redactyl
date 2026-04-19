@@ -119,40 +119,31 @@
         devVenv = pythonSet.mkVirtualEnv "redactyl-checks-env" {
           redactyl = ["dev"];
         };
+        mkCheck = name: nativeBuildInputs: body:
+          pkgs.runCommand name {
+            src = ./.;
+            inherit nativeBuildInputs;
+          } ''
+            cd "$src"
+            export HOME="$TMPDIR"
+            ${body}
+            touch "$out"
+          '';
       in {
-        lock =
-          pkgs.runCommand "uv-lock-check" {
-            src = ./.;
-            nativeBuildInputs = [devVenv pkgs.uv];
-          } ''
-            cd "$src"
-            export HOME="$TMPDIR"
-            export UV_PYTHON="${devVenv}/bin/python"
-            uv lock --check
-            touch "$out"
-          '';
+        lock = mkCheck "uv-lock-check" [devVenv pkgs.uv] ''
+          export UV_PYTHON="${devVenv}/bin/python"
+          export UV_PYTHON_DOWNLOADS=never
+          export UV_NO_MANAGED_PYTHON=1
+          uv lock --check
+        '';
 
-        tests =
-          pkgs.runCommand "pytest-check" {
-            src = ./.;
-            nativeBuildInputs = [devVenv];
-          } ''
-            cd "$src"
-            export HOME="$TMPDIR"
-            pytest
-            touch "$out"
-          '';
+        tests = mkCheck "pytest-check" [devVenv] ''
+          pytest -q -o cache_dir="$TMPDIR/.pytest_cache"
+        '';
 
-        typing =
-          pkgs.runCommand "basedpyright-check" {
-            src = ./.;
-            nativeBuildInputs = [devVenv];
-          } ''
-            cd "$src"
-            export HOME="$TMPDIR"
-            basedpyright
-            touch "$out"
-          '';
+        typing = mkCheck "basedpyright-check" [devVenv] ''
+          basedpyright
+        '';
 
         treefmt = treefmtEval.${system}.config.build.check ./.;
       }
@@ -185,6 +176,7 @@
           ];
           env = {
             UV_NO_SYNC = "1";
+            UV_NO_MANAGED_PYTHON = "1";
             UV_PYTHON = python.interpreter;
             UV_PYTHON_DOWNLOADS = "never";
           };
