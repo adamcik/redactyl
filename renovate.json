@@ -44,6 +44,11 @@
       "matchManagers": ["uv", "pep621"],
       "groupName": "python dependencies",
       "minimumReleaseAge": "3 days"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "matchDepNames": ["python"],
+      "enabled": false
     }
   ]
 }
