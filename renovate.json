@@ -43,6 +43,7 @@
     {
       "matchManagers": ["uv", "pep621"],
       "groupName": "python dependencies",
+      "rangeStrategy": "pin",
       "minimumReleaseAge": "3 days"
     },
     {
