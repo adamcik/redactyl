@@ -42,7 +42,7 @@
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [ "x86_64-linux" ];
+      systems = inputs.nixpkgs.lib.systems.flakeExposed;
       imports = [
         nix-tooling.flakeModules.formatting.common
         nix-tooling.flakeModules.formatting.python
@@ -111,6 +111,14 @@
           };
 
           treefmt.programs.zizmor.enable = true;
+          treefmt.settings.formatter.tombi-lint = {
+            command = "${pkgs.tombi}/bin/tombi";
+            includes = [ "*.toml" ];
+            options = [
+              "lint"
+              "--offline"
+            ];
+          };
 
           packages = {
             default = pythonSet.redactyl;
