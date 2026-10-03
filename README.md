@@ -6,14 +6,13 @@
 
 Defense-in-depth redaction and scrubbing for Python structured payloads.
 
-Redactyl is a Python library for removing sensitive data from structured logs,
-error payloads, Sentry events, and other nested JSON-like dict/list payloads.
-It is built for real-world payloads where the full shape is not known ahead of
-time. You define layered rules and heuristics, then Redactyl mutates payloads
-in-place.
+Redactyl is a Python library for removing sensitive data from structured logs, error
+payloads, Sentry events, and other nested JSON-like dict/list payloads. It is built for
+real-world payloads where the full shape is not known ahead of time. You define layered
+rules and heuristics, then Redactyl mutates payloads in-place.
 
-`REDACT` replaces the matched value directly. `SCRUB` removes previously seen
-secrets from surrounding text using a shared `SecretStore`.
+`REDACT` replaces the matched value directly. `SCRUB` removes previously seen secrets
+from surrounding text using a shared `SecretStore`.
 
 ## Features
 
@@ -22,8 +21,10 @@ secrets from surrounding text using a shared `SecretStore`.
 - Path-based rules with wildcards (`PathRule("user.*", ...)`)
 - Regex rules for paths and string values (`RegexPathRule`, `RegexValueRule`)
 - Key token matching across snake_case and camelCase (`SubstringRule`)
-- URL-aware rewriting for query params, userinfo, and fragments (`UrlRule`, `Action.URL`)
-- Actions for different handling strategies: `REDACT`, `SCRUB`, `DROP`, `SAFE`, `URL`, `HASH`
+- URL-aware rewriting for query params, userinfo, and fragments (`UrlRule`,
+  `Action.URL`)
+- Actions for different handling strategies: `REDACT`, `SCRUB`, `DROP`, `SAFE`, `URL`,
+  `HASH`
 - Optional limits (`max_depth`, `max_items`) to cap large payload traversal
 
 ## Install
@@ -65,7 +66,8 @@ The API has two primary concepts:
 
 Common taxonomy:
 
-- Path-based rules (`PathRule`, `RegexPathRule`, `UrlRule`) match structured payload paths.
+- Path-based rules (`PathRule`, `RegexPathRule`, `UrlRule`) match structured payload
+  paths.
 - Value-based rules (`RegexValueRule`) match and transform string content.
 - Token rules (`SubstringRule`) match key names by tokenizing camel/snake case.
 
@@ -73,7 +75,8 @@ Notes:
 
 - Prefer `UrlRule` when you know a field is a URL and want to apply URL rules.
 - Use `RegexValueRule(..., action=Action.URL, rules=...)` to find URLs inside strings.
-- `SCRUB` always relies on the shared `SecretStore` for the current call or provided `secrets=`.
+- `SCRUB` always relies on the shared `SecretStore` for the current call or provided
+  `secrets=`.
 
 ## Cookbook
 
@@ -173,9 +176,13 @@ redactor = build_redactor(
 
 ## Secret store lifetime
 
-By default, each `redactor(...)` call uses a fresh mutable secret store, so newly seen secrets do not leak across calls. You can also pass your own `SecretStore` to persist secrets for a request lifecycle.
+By default, each `redactor(...)` call uses a fresh mutable secret store, so newly seen
+secrets do not leak across calls. You can also pass your own `SecretStore` to persist
+secrets for a request lifecycle.
 
-Important limitation: if a later call sees a new secret that should have been scrubbed in an earlier call, it will not be scrubbed retroactively. Avoid relying on cross-call scrubbing for newly discovered values.
+Important limitation: if a later call sees a new secret that should have been scrubbed
+in an earlier call, it will not be scrubbed retroactively. Avoid relying on cross-call
+scrubbing for newly discovered values.
 
 ```python
 from redactyl import Action, Options, PathRule, build_redactor
