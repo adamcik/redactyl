@@ -4,6 +4,12 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
+
+    nix-tooling.url = "github:adamcik/nix-tooling";
+    nix-tooling.inputs.nixpkgs.follows = "nixpkgs";
+
     pyproject-nix = {
       url = "github:pyproject-nix/pyproject.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -24,168 +30,119 @@
       };
     };
 
-    treefmt-nix = {
-      url = "github:numtide/treefmt-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = {
-    nixpkgs,
-    pyproject-build-systems,
-    pyproject-nix,
-    treefmt-nix,
-    uv2nix,
-    ...
-  }: let
-    inherit (nixpkgs) lib;
-    forAllSystems = lib.genAttrs lib.systems.flakeExposed;
+  outputs =
+    inputs@{
+      flake-parts,
+      pyproject-build-systems,
+      pyproject-nix,
+      nix-tooling,
+      uv2nix,
+      ...
+    }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [ "x86_64-linux" ];
+      imports = [
+        nix-tooling.flakeModules.formatting.common
+        nix-tooling.flakeModules.formatting.python
+      ];
 
-    workspace = uv2nix.lib.workspace.loadWorkspace {workspaceRoot = ./.;};
+      perSystem =
+        {
+          pkgs,
+          system,
+          ...
+        }:
+        let
+          inherit (pkgs) lib;
+          workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
 
-    overlay = workspace.mkPyprojectOverlay {
-      sourcePreference = "wheel";
+          overlay = workspace.mkPyprojectOverlay {
+            sourcePreference = "wheel";
+          };
+
+          editableOverlay = workspace.mkEditablePyprojectOverlay {
+            root = "$REPO_ROOT";
+          };
+
+          python = pkgs.python312;
+          baseSet = pkgs.callPackage pyproject-nix.build.packages { inherit python; };
+          pythonSet = baseSet.overrideScope (
+            lib.composeManyExtensions [
+              pyproject-build-systems.overlays.default
+              overlay
+            ]
+          );
+
+          devVenv = pythonSet.mkVirtualEnv "redactyl-checks-env" {
+            redactyl = [ "dev" ];
+          };
+          mkCheck =
+            name: nativeBuildInputs: body:
+            pkgs.runCommand name
+              {
+                src = ./.;
+                inherit nativeBuildInputs;
+              }
+              ''
+                cd "$src"
+                export HOME="$TMPDIR"
+                ${body}
+                touch "$out"
+              '';
+        in
+        {
+          checks = {
+            lock = mkCheck "uv-lock-check" [ devVenv pkgs.uv ] ''
+              export UV_PYTHON="${devVenv}/bin/python"
+              export UV_PYTHON_DOWNLOADS=never
+              export UV_NO_MANAGED_PYTHON=1
+              uv lock --check
+            '';
+
+            tests = mkCheck "pytest-check" [ devVenv ] ''
+              pytest -q -o cache_dir="$TMPDIR/.pytest_cache"
+            '';
+
+            typing = mkCheck "basedpyright-check" [ devVenv ] ''
+              basedpyright
+            '';
+          };
+
+          treefmt.programs.zizmor.enable = true;
+
+          packages = {
+            default = pythonSet.redactyl;
+            redactyl = pythonSet.redactyl;
+          };
+
+          devShells.default = pkgs.mkShell {
+            packages =
+              let
+                editablePythonSet = pythonSet.overrideScope (lib.composeManyExtensions [ editableOverlay ]);
+                venv = editablePythonSet.mkVirtualEnv "redactyl-dev-env" {
+                  redactyl = [ "dev" ];
+                };
+              in
+              [
+                pkgs.actionlint
+                pkgs.tombi
+                pkgs.uv
+                pkgs.zizmor
+                venv
+              ];
+            env = {
+              UV_NO_SYNC = "1";
+              UV_NO_MANAGED_PYTHON = "1";
+              UV_PYTHON = python.interpreter;
+              UV_PYTHON_DOWNLOADS = "never";
+            };
+            shellHook = ''
+              unset PYTHONPATH
+              export REPO_ROOT=$(git rev-parse --show-toplevel)
+            '';
+          };
+        };
     };
-
-    editableOverlay = workspace.mkEditablePyprojectOverlay {
-      root = "$REPO_ROOT";
-    };
-
-    pythonSets = forAllSystems (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-        python = pkgs.python312;
-        baseSet = pkgs.callPackage pyproject-nix.build.packages {
-          inherit python;
-        };
-      in
-        baseSet.overrideScope (
-          lib.composeManyExtensions [
-            pyproject-build-systems.overlays.default
-            overlay
-          ]
-        )
-    );
-
-    treefmtEval = forAllSystems (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-        pythonSet = pythonSets.${system};
-        lintVenv = pythonSet.mkVirtualEnv "redactyl-lint-env" {
-          redactyl = ["dev"];
-        };
-      in
-        treefmt-nix.lib.evalModule pkgs {
-          projectRootFile = "flake.nix";
-          programs = {
-            alejandra.enable = true;
-            actionlint.enable = true;
-            prettier.enable = true;
-            zizmor.enable = true;
-          };
-          settings.formatter = {
-            ruff-check = {
-              command = "${lintVenv}/bin/ruff";
-              includes = ["*.py"];
-              options = ["check" "--fix"];
-              priority = 10;
-            };
-            ruff-format = {
-              command = "${lintVenv}/bin/ruff";
-              includes = ["*.py"];
-              options = ["format"];
-              priority = 20;
-            };
-            tombi-format = {
-              command = "${pkgs.tombi}/bin/tombi";
-              includes = ["*.toml"];
-              options = ["format" "--offline"];
-            };
-            tombi-lint = {
-              command = "${pkgs.tombi}/bin/tombi";
-              includes = ["*.toml"];
-              options = ["lint" "--offline"];
-            };
-          };
-        }
-    );
-  in {
-    formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);
-
-    checks = forAllSystems (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-        pythonSet = pythonSets.${system};
-        devVenv = pythonSet.mkVirtualEnv "redactyl-checks-env" {
-          redactyl = ["dev"];
-        };
-        mkCheck = name: nativeBuildInputs: body:
-          pkgs.runCommand name {
-            src = ./.;
-            inherit nativeBuildInputs;
-          } ''
-            cd "$src"
-            export HOME="$TMPDIR"
-            ${body}
-            touch "$out"
-          '';
-      in {
-        lock = mkCheck "uv-lock-check" [devVenv pkgs.uv] ''
-          export UV_PYTHON="${devVenv}/bin/python"
-          export UV_PYTHON_DOWNLOADS=never
-          export UV_NO_MANAGED_PYTHON=1
-          uv lock --check
-        '';
-
-        tests = mkCheck "pytest-check" [devVenv] ''
-          pytest -q -o cache_dir="$TMPDIR/.pytest_cache"
-        '';
-
-        typing = mkCheck "basedpyright-check" [devVenv] ''
-          basedpyright
-        '';
-
-        treefmt = treefmtEval.${system}.config.build.check ./.;
-      }
-    );
-
-    packages = forAllSystems (system: {
-      default = pythonSets.${system}.redactyl;
-      redactyl = pythonSets.${system}.redactyl;
-    });
-
-    devShells = forAllSystems (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-        python = pkgs.python312;
-        editablePythonSet = pythonSets.${system}.overrideScope (
-          lib.composeManyExtensions [editableOverlay]
-        );
-        venv = editablePythonSet.mkVirtualEnv "redactyl-dev-env" {
-          redactyl = ["dev"];
-        };
-      in {
-        default = pkgs.mkShell {
-          packages = [
-            pkgs.actionlint
-            pkgs.tombi
-            pkgs.uv
-            pkgs.zizmor
-            treefmtEval.${system}.config.build.wrapper
-            venv
-          ];
-          env = {
-            UV_NO_SYNC = "1";
-            UV_NO_MANAGED_PYTHON = "1";
-            UV_PYTHON = python.interpreter;
-            UV_PYTHON_DOWNLOADS = "never";
-          };
-          shellHook = ''
-            unset PYTHONPATH
-            export REPO_ROOT=$(git rev-parse --show-toplevel)
-          '';
-        };
-      }
-    );
-  };
 }
