@@ -11,6 +11,7 @@ from .core import (
 )
 from .options import Options
 from .presets import (
+    sentry_before_send_log_redactor,
     sentry_before_send_redactor,
     sentry_breadcrumb_redactor,
     structlog_redactor,
@@ -51,6 +52,7 @@ __all__ = [
     "__version__",
     "build_redactor",
     "deserialize_url",
+    "sentry_before_send_log_redactor",
     "sentry_before_send_redactor",
     "sentry_breadcrumb_redactor",
     "serialize_url",
