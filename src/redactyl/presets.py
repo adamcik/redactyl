@@ -62,11 +62,13 @@ def structlog_redactor(
 
     Place this before rendering. Exception objects and ``exc_info`` tuples must
     first be converted to JSON-compatible data by a preceding processor.
+    Structured traceback stacks are retained, but frame locals are dropped.
     """
     from structlog import DropEvent  # noqa: PLC0415
 
     redact = build_redactor(
         [
+            RegexPathRule(r"(^|\.)frames\.\d+\.locals$", Action.DROP),
             SubstringRule(tokens=_SENSITIVE_TOKENS, action=Action.REDACT),
             *rules,
             PathRule("event", Action.SCRUB),

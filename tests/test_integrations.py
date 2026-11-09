@@ -23,17 +23,17 @@ _SECRET = "synthetic-secret-value"
 _REPLACEMENT = "[REDACTED]"
 
 
-class CaptureTransport(Transport):
+class _CaptureTransport(Transport):
     """Keep real SDK envelopes locally; no HTTP transport is constructed."""
 
     def __init__(self):
         super().__init__()
         self.envelopes = []
 
-    def capture_envelope(self, envelope):
+    def capture_envelope(self, envelope) -> None:
         self.envelopes.append(envelope)
 
-    def payloads(self, item_type):
+    def payloads(self, item_type) -> list[object]:
         return [
             item.payload.json
             for envelope in self.envelopes
@@ -44,11 +44,11 @@ class CaptureTransport(Transport):
 
 @pytest.fixture
 def sentry():
-    transport = CaptureTransport()
+    transport = _CaptureTransport()
     clients = []
     with sentry_sdk.isolation_scope(), sentry_sdk.new_scope() as scope:
 
-        def configure(**options: object) -> CaptureTransport:
+        def configure(**options: object) -> _CaptureTransport:
             client = sentry_sdk.Client(
                 dsn="https://public@example.invalid/1",
                 transport=transport,
@@ -313,9 +313,42 @@ def test_structlog_normalizes_exception_before_redaction():
     assert _SECRET not in sink.getvalue()
 
 
+def test_structlog_structured_traceback_preserves_stack_without_frame_locals():
+    sink = io.StringIO()
+    logger = structlog.wrap_logger(
+        structlog.PrintLogger(file=sink),
+        processors=[
+            structlog.processors.dict_tracebacks,
+            structlog_redactor([]),
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(0),
+    )
+
+    def fail() -> Never:
+        _confidential = "synthetic-local-only-secret"
+        raise ValueError("synthetic failure")
+
+    try:
+        fail()
+    except ValueError:
+        logger.exception("caught failure")
+
+    event = json.loads(sink.getvalue())
+    [exception] = event["exception"]
+    assert exception["exc_type"] == "ValueError"
+    assert exception["exc_value"] == "synthetic failure"
+    frames = exception["frames"]
+    assert frames[-1]["name"] == "fail"
+    assert frames[-1]["filename"].endswith("test_integrations.py")
+    assert frames[-1]["lineno"] > 0
+    assert all("locals" not in frame for frame in frames)
+    assert "synthetic-local-only-secret" not in sink.getvalue()
+
+
 def test_structlog_unnormalized_exception_is_not_emitted():
     sink = io.StringIO()
-    logger = make_logger(structlog_redactor([]), sink)
+    logger = _make_logger(structlog_redactor([]), sink)
     try:
         raise ValueError(_SECRET)  # noqa: TRY301
     except ValueError:
@@ -323,7 +356,7 @@ def test_structlog_unnormalized_exception_is_not_emitted():
     assert sink.getvalue() == ""
 
 
-def make_logger(processor, sink):
+def _make_logger(processor, sink) -> structlog.BoundLogger:
     return structlog.wrap_logger(
         structlog.PrintLogger(file=sink),
         processors=[processor, structlog.processors.JSONRenderer()],
@@ -333,7 +366,7 @@ def make_logger(processor, sink):
 
 def test_structlog_processor_returns_renderable_sanitized_event():
     sink = io.StringIO()
-    logger = make_logger(structlog_redactor([]), sink)
+    logger = _make_logger(structlog_redactor([]), sink)
     logger.info(f"login {_SECRET}", nested={"password": _SECRET})  # noqa: G004
     event = json.loads(sink.getvalue())
     assert event["event"] == f"login {_REPLACEMENT}"
@@ -346,7 +379,7 @@ def test_structlog_processor_returns_renderable_sanitized_event():
 )
 def test_structlog_redaction_failure_never_reaches_sink(rules, fields):
     sink = io.StringIO()
-    logger = make_logger(structlog_redactor(rules), sink)
+    logger = _make_logger(structlog_redactor(rules), sink)
     logger.info(_SECRET, **fields)
     assert sink.getvalue() == ""
 
