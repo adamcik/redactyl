@@ -37,6 +37,8 @@ uv sync
 
 ## Quick start
 
+See [core compatibility notes](docs/core-migration.md) before upgrading existing callers.
+
 ```python
 from redactyl import Action, PathRule, SubstringRule, build_redactor
 
