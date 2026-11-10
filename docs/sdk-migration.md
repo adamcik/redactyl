@@ -1,7 +1,7 @@
 # SDK callback migration
 
-The SDK factories now return callbacks with the signatures and return values required
-by their SDKs, not one-argument mutators. Update registration and direct invocations.
+The SDK factories now return callbacks with the signatures and return values required by
+their SDKs, not one-argument mutators. Update registration and direct invocations.
 Install `sentry-sdk` or `structlog` separately; neither is a core runtime dependency.
 
 ## Sentry
@@ -29,7 +29,8 @@ Breadcrumb timestamps are normalized; hints are left untouched. Hooks do not sha
 secret store implicitly.
 
 Attachments bypass these hooks. Omit or sanitize their bytes, names, and metadata
-independently. Profiles, sessions, metrics, replays, and other telemetry are not covered.
+independently. Profiles, sessions, metrics, replays, and other telemetry are not
+covered.
 
 ## Structlog
 
@@ -48,10 +49,10 @@ The processor accepts `(logger, method_name, event_dict)` and returns the saniti
 dictionary. On redaction failure it raises `structlog.DropEvent`, suppressing that log.
 Normalize exception objects and `exc_info` tuples before redaction, and redact before
 rendering and every sink. Structured traceback `locals` dictionaries are dropped;
-exception messages, filenames, and other unknown text are not automatically safe.
-Later processors can still introduce sensitive data.
+exception messages, filenames, and other unknown text are not automatically safe. Later
+processors can still introduce sensitive data.
 
-Both adapters let process-control exceptions such as `KeyboardInterrupt` propagate.
-Do not catch redaction errors and emit the original payload as a fallback. The
+Both adapters let process-control exceptions such as `KeyboardInterrupt` propagate. Do
+not catch redaction errors and emit the original payload as a fallback. The
 [core compatibility notes](core-migration.md) also apply, including nested object
 replacement and deterministic custom rules.
