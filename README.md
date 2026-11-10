@@ -293,6 +293,10 @@ preset = build_redactor(
 
 ## Presets
 
+See [SDK migration and registration](docs/sdk-migration.md) for callback signatures,
+failure handling, and channel coverage. The factories return SDK callbacks, not
+one-argument payload mutators.
+
 Common entry points for structured logging and error reporting.
 
 ```python
