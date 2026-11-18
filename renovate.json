@@ -3,53 +3,5 @@
   "extends": [
     "github>adamcik/renovate-config:library",
     "github>adamcik/renovate-config:automerge"
-  ],
-  "nix": {
-    "enabled": true
-  },
-  "labels": ["dependencies"],
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 06:00 on Saturday"]
-  },
-  "packageRules": [
-    {
-      "matchManagers": ["pep621"],
-      "matchUpdateTypes": ["lockFileMaintenance"],
-      "overrideDepName": "uv lock file maintenance",
-      "groupName": "uv lock file maintenance",
-      "commitMessageTopic": "uv"
-    },
-    {
-      "matchManagers": ["nix"],
-      "matchUpdateTypes": ["lockFileMaintenance"],
-      "overrideDepName": "flake lock file maintenance",
-      "groupName": "flake lock file maintenance",
-      "commitMessageTopic": "flake"
-    },
-    {
-      "matchManagers": ["github-actions", "nix"],
-      "matchUpdateTypes": ["digest", "pin", "patch", "minor"],
-      "automerge": true,
-      "automergeType": "pr"
-    },
-    {
-      "matchManagers": ["github-actions"],
-      "groupName": "github actions"
-    },
-    {
-      "matchManagers": ["nix"],
-      "groupName": "nix flake inputs"
-    },
-    {
-      "matchManagers": ["pep621"],
-      "groupName": "python dependencies",
-      "rangeStrategy": "pin"
-    },
-    {
-      "matchManagers": ["pep621"],
-      "matchDepNames": ["python"],
-      "enabled": false
-    }
   ]
 }
