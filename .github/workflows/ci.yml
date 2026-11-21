@@ -24,6 +24,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Verify Actions dependency lockfile
+        uses: adamcik/nix-tooling/actions/verify-actions-lock@a73c6c63e01f95b7f7e88e95fc5a20a8339c66d4
+
       - name: Install Nix
         uses: adamcik/nix-tooling/actions/nix-setup@03474cbd37cedc82f533d69a65cdd23237b5798e
 
